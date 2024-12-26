@@ -1,0 +1,35 @@
+name: Update LittleLink site.
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create the .ssh directory if it does not exist.
+        run: |
+          mkdir -p "$HOME/.ssh" && touch "$HOME/.ssh/known_hosts"
+          chmod -R 700 "$HOME/.ssh"
+
+      - name: Add the public host key.
+        run: ssh-keyscan -t ed25519 blog.ssb-tech.net >> "$HOME/.ssh/known_hosts"
+
+      - name: Import SSH private key
+        run: |
+          echo "${{ secrets.ORACLE_CLOUD_SSH_KEY }}" > "$HOME/.ssh/id_ed25519"
+          chmod 600 $HOME/.ssh/id_ed25519
+
+      - name: SCP everything to the remote server.
+        run: scp -r -i "$HOME/.ssh/id_ed25519" ./* github@blog.ssb-tech.net:/var/www/littlelink
+
+      - name: Clean up .ssh directory.
+        run: rm -rf "$HOME/.ssh"
